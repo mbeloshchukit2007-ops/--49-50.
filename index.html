@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система обліку посилок - PostService</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand" onclick="showPage('home-page')">PostService</div>
+        <nav class="nav-menu">
+            <button class="nav-btn active" id="nav-home" onclick="showPage('home-page')">Головна</button>
+            <button class="nav-btn" id="nav-list" onclick="showPage('list-page')">Список посилок</button>
+            <button class="nav-btn" id="nav-form" onclick="openNewForm()">Нова посилка</button>
+            <button class="nav-btn" id="nav-about" onclick="showPage('about-page')">Про застосунок</button>
+        </nav>
+    </header>
+
+    <main class="wrapper">
+
+        <!-- Головна -->
+        <section id="home-page" class="page">
+            <div class="card">
+                <h1>Облік поштових відправлень</h1>
+                <p class="lead">Веб-застосунок для реєстрації та управління поштовими посилками через REST API PostService.</p>
+
+                <div class="tiles">
+                    <div class="tile" onclick="showPage('list-page')">
+                        <h3>Список відправлень</h3>
+                        <p>Перегляд усіх зареєстрованих посилок із можливістю редагування та видалення.</p>
+                        <button class="btn btn-primary">Відкрити список</button>
+                    </div>
+                    <div class="tile" onclick="openNewForm()">
+                        <h3>Нова посилка</h3>
+                        <p>Реєстрація нового поштового відправлення із перевіркою введених даних.</p>
+                        <button class="btn btn-success">Додати запис</button>
+                    </div>
+                    <div class="tile" onclick="showPage('about-page')">
+                        <h3>Про застосунок</h3>
+                        <p>Інформація про веб-додаток, технологічний стек та правила валідації.</p>
+                        <button class="btn btn-secondary">Докладніше</button>
+                    </div>
+                </div>
+
+                <div class="server-box">
+                    <label for="server-url"><strong>Адреса API-сервера:</strong></label>
+                    <input type="text" id="server-url" value="http://localhost:5000/postings">
+                    <button class="btn btn-sm btn-secondary" onclick="applyServerUrl()">Застосувати</button>
+                    <span id="server-badge" class="badge-status">Перевірка...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Список -->
+        <section id="list-page" class="page" style="display:none;">
+            <div class="card">
+                <div class="list-header">
+                    <div>
+                        <h2>Список поштових відправлень</h2>
+                        <p id="list-status" class="info-text">Завантаження...</p>
+                    </div>
+                    <div class="header-btns">
+                        <button class="btn btn-primary" onclick="openNewForm()">Додати відправлення</button>
+                        <button class="btn btn-secondary" onclick="loadData()">Оновити</button>
+                    </div>
+                </div>
+
+                <div class="scroll-table">
+                    <table class="main-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Опис</th>
+                                <th>Від кого</th>
+                                <th>Кому</th>
+                                <th>Доставка</th>
+                                <th>Вага</th>
+                                <th>Габарити (см)</th>
+                                <th>Оцінка</th>
+                                <th>Ціна</th>
+                                <th>Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="list-footer">
+                    <span id="record-count">Записів: 0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Форма -->
+        <section id="form-page" class="page" style="display:none;">
+            <div class="card form-card">
+                <h2 id="form-heading">Нова посилка</h2>
+                <p class="info-text">Заповніть усі обов'язкові поля (позначені *)</p>
+
+                <form id="parcel-form" novalidate onsubmit="submitForm(event)">
+                    <input type="hidden" id="edit-id">
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="f-from">Відправник (ПІБ / місто) *</label>
+                            <input type="text" id="f-from" placeholder="Наприклад: Білошчук М., Суми">
+                            <span class="err" id="e-from"></span>
+                        </div>
+                        <div class="field">
+                            <label for="f-to">Одержувач (ПІБ / місто) *</label>
+                            <input type="text" id="f-to" placeholder="Наприклад: Коваль О., Київ">
+                            <span class="err" id="e-to"></span>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="f-content">Опис вмісту *</label>
+                        <input type="text" id="f-content" placeholder="Наприклад: Книги, навчальні матеріали">
+                        <span class="err" id="e-content"></span>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="f-type">Спосіб доставки</label>
+                            <select id="f-type">
+                                <option value="0">У відділення (стандарт)</option>
+                                <option value="1">Кур'єром (адресна)</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="f-weight">Вага (кг) *</label>
+                            <input type="number" id="f-weight" step="0.1" min="0.1" value="1.0">
+                            <span class="err" id="e-weight"></span>
+                        </div>
+                    </div>
+
+                    <div class="row-3">
+                        <div class="field">
+                            <label for="f-depth">Довжина (см) *</label>
+                            <input type="number" id="f-depth" step="1" min="1" value="15">
+                            <span class="err" id="e-depth"></span>
+                        </div>
+                        <div class="field">
+                            <label for="f-width">Ширина (см) *</label>
+                            <input type="number" id="f-width" step="1" min="1" value="20">
+                            <span class="err" id="e-width"></span>
+                        </div>
+                        <div class="field">
+                            <label for="f-height">Висота (см) *</label>
+                            <input type="number" id="f-height" step="1" min="1" value="10">
+                            <span class="err" id="e-height"></span>
+                        </div>
+                    </div>
+
+                    <div class="row-2">
+                        <div class="field">
+                            <label for="f-value">Оголошена цінність (грн)</label>
+                            <input type="number" id="f-value" step="10" min="0" value="100">
+                            <span class="err" id="e-value"></span>
+                        </div>
+                        <div class="field">
+                            <label for="f-price">Вартість доставки (грн) *</label>
+                            <input type="number" id="f-price" step="5" min="0" value="65">
+                            <span class="err" id="e-price"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-btns">
+                        <button type="submit" class="btn btn-primary" id="btn-submit">Зберегти</button>
+                        <button type="button" class="btn btn-secondary" onclick="showPage('list-page')">Скасувати</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Про застосунок -->
+        <section id="about-page" class="page" style="display:none;">
+            <div class="card">
+                <h2>Про веб-застосунок PostService</h2>
+                <div class="about-block">
+                    <p><strong>Назва:</strong> Система обліку поштових відправлень</p>
+                    <p><strong>Версія:</strong> 1.0 (клієнтський веб-модуль)</p>
+                    <p><strong>Призначення:</strong> Реєстрація, перегляд, редагування та видалення записів поштових посилок через REST API PostService.</p>
+
+                    <h3>Технології</h3>
+                    <ul>
+                        <li>HTML5 — розмітка структури сторінок;</li>
+                        <li>CSS3 — стилізація та адаптивний інтерфейс;</li>
+                        <li>JavaScript (ES6+) — логіка роботи SPA, робота з DOM;</li>
+                        <li>Fetch API + async/await — асинхронна взаємодія з REST API;</li>
+                        <li>localStorage — локальний резервний режим при відсутності сервера.</li>
+                    </ul>
+
+                    <h3>Правила перевірки даних</h3>
+                    <ul>
+                        <li>Поля «Відправник» та «Одержувач» є обов'язковими (мінімум 2 символи);</li>
+                        <li>Поле «Опис вмісту» є обов'язковим;</li>
+                        <li>Вага та всі три розміри (Д×Ш×В) мають бути строго більшими за нуль;</li>
+                        <li>Оголошена цінність та вартість доставки не можуть бути від'ємними.</li>
+                    </ul>
+                </div>
+                <div class="form-btns">
+                    <button class="btn btn-primary" onclick="showPage('list-page')">Перейти до списку</button>
+                    <button class="btn btn-secondary" onclick="showPage('home-page')">На головну</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Модальне вікно видалення -->
+    <div id="del-modal" class="modal-bg" style="display:none;">
+        <div class="modal-box">
+            <h3>Підтвердження видалення</h3>
+            <p>Видалити відправлення <strong id="del-label"></strong>?</p>
+            <p class="modal-note">Цю дію не можна скасувати.</p>
+            <div class="modal-btns">
+                <button class="btn btn-danger" onclick="doDelete()">Видалити</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Скасувати</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
